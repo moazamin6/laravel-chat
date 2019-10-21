@@ -1882,6 +1882,9 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
 /* harmony default export */ __webpack_exports__["default"] = ({
   name: "chat",
   props: ['auth_user'],
@@ -1891,19 +1894,25 @@ __webpack_require__.r(__webpack_exports__);
       user: {},
       all_messages: [],
       online_users: [],
+      all_users: [],
       active_chat_flag: '-1',
       receiver_user: {},
-      messaging: ''
+      messaging: '',
+      whisper_id: ''
     };
   },
   computed: {// msg_class(){
     //
     // }
   },
+  created: function created() {
+    this.getAllUsers();
+  },
   watch: {
     message: function message() {
       window.Echo["private"]('laravel-chat-' + this.receiver_user.id).whisper('messaging', {
-        msg: this.message
+        msg: this.message,
+        whisper_id: this.auth_user.id
       });
     }
   },
@@ -1918,7 +1927,8 @@ __webpack_require__.r(__webpack_exports__);
         });
         message_data = null;
         message_data = {
-          user_id: this.auth_user.id,
+          sender_id: this.auth_user.id,
+          receiver_id: this.receiver_user.id,
           message: this.message,
           msg_class: 'sent_msg'
         };
@@ -1929,6 +1939,16 @@ __webpack_require__.r(__webpack_exports__);
     selectUserToSendMessage: function selectUserToSendMessage(user, index) {
       this.receiver_user = user;
       this.active_chat_flag = index; // console.log(this.receiver_user)
+    },
+    getAllUsers: function getAllUsers() {
+      var self = this;
+      axios.get(window.base_url + "/users").then(function (response) {
+        self.all_users = response.data;
+        self.all_users.forEach(function (user, index) {
+          self.$set(user, 'status', 'Offline');
+          self.$set(user, 'typing', '');
+        });
+      });
     }
   },
   mounted: function mounted() {
@@ -1936,30 +1956,45 @@ __webpack_require__.r(__webpack_exports__);
 
     window.Echo["private"]('laravel-chat-' + this.auth_user.id).listen('ChatEvent', function (e) {
       var message_data = {
-        user_id: e.user.id,
+        sender_id: _this.receiver_user.id,
+        receiver_id: _this.auth_user.id,
         message: e.message,
         msg_class: 'received_msg'
       };
 
       _this.all_messages.push(message_data);
     }).listenForWhisper('messaging', function (e) {
-      if (e.msg !== '') {
-        _this.messaging = 'Typing...';
-      } else {
-        _this.messaging = '';
-      } // console.log(e);
-
+      _this.all_users.forEach(function (user, index) {
+        if (e.msg !== '') {
+          if (e.whisper_id === user.id) {
+            Vue.set(user, 'typing', 'Typing...');
+          }
+        } else {
+          Vue.set(user, 'typing', '');
+        }
+      });
     });
     window.Echo.join("user-join").here(function (users) {
-      _this.online_users = users; // console.log(users);
-    }).joining(function (user) {
-      _this.online_users.push(user); // console.log(user.name + " joined");
-
-    }).leaving(function (user) {
-      var index = _this.online_users.indexOf(user.name);
-
-      _this.online_users.splice(index, 1); // console.log(user.name + " leaved");
-
+      var self = _this;
+      self.all_users.forEach(function (user, index) {
+        users.forEach(function (on_user, index) {
+          if (user.id === on_user.id) {
+            Vue.set(user, 'status', 'Online'); // user.status = 'Online';
+          }
+        });
+      });
+    }).joining(function (on_user) {
+      _this.all_users.forEach(function (user, index) {
+        if (user.id === on_user.id) {
+          Vue.set(user, 'status', 'Online'); // user.status = 'Online';
+        }
+      });
+    }).leaving(function (off_user) {
+      _this.all_users.forEach(function (user, index) {
+        if (user.id === off_user.id) {
+          Vue.set(user, 'status', 'Offline');
+        }
+      });
     });
   }
 });
@@ -8389,7 +8424,7 @@ exports = module.exports = __webpack_require__(/*! ../../../node_modules/css-loa
 
 
 // module
-exports.push([module.i, "\n.container[data-v-0d66c37a] {\n   max-width: 900px;\n}\n.msg-list[data-v-0d66c37a] {\n   position: absolute;\n   bottom: 0;\n}\n.msg-list li[data-v-0d66c37a] {\n   margin-bottom: 5px;\n   width: 700px;\n}\n.inbox_people[data-v-0d66c37a] {\n   background: #fff;\n   float: left;\n   overflow: hidden;\n   width: 30%;\n   border-right: 1px solid #ddd;\n}\n.inbox_msg[data-v-0d66c37a] {\n   border: 1px solid #ddd;\n   clear: both;\n   overflow: hidden;\n}\n.top_spac[data-v-0d66c37a] {\n   margin: 20px 0 0;\n}\n.recent_heading[data-v-0d66c37a] {\n   float: left;\n   width: 40%;\n}\n.srch_bar[data-v-0d66c37a] {\n   display: inline-block;\n   text-align: right;\n   width: 60%;\n}\n.headind_srch[data-v-0d66c37a] {\n   padding: 10px 29px 10px 20px;\n   overflow: hidden;\n   border-bottom: 1px solid #c4c4c4;\n}\n.recent_heading h4[data-v-0d66c37a] {\n   color: #0465ac;\n   font-size: 16px;\n   margin: auto;\n   line-height: 29px;\n}\n.srch_bar input[data-v-0d66c37a] {\n   outline: none;\n   border: 1px solid #cdcdcd;\n   border-width: 0 0 1px 0;\n   width: 80%;\n   padding: 2px 0 4px 6px;\n   background: none;\n}\n.srch_bar .input-group-addon button[data-v-0d66c37a] {\n   background: rgba(0, 0, 0, 0) none repeat scroll 0 0;\n   border: medium none;\n   padding: 0;\n   color: #707070;\n   font-size: 18px;\n}\n.srch_bar .input-group-addon[data-v-0d66c37a] {\n   margin: 0 0 0 -27px;\n}\n.chat_ib h5[data-v-0d66c37a] {\n   font-size: 15px;\n   color: #464646;\n   margin: 0 0 8px 0;\n}\n.chat_ib h5 span[data-v-0d66c37a] {\n   font-size: 13px;\n   float: right;\n}\n.chat_ib p[data-v-0d66c37a] {\n   font-size: 12px;\n   color: #989898;\n   margin: auto;\n   display: inline-block;\n   white-space: nowrap;\n   overflow: hidden;\n   text-overflow: ellipsis;\n}\n.chat_img[data-v-0d66c37a] {\n   float: left;\n   width: 11%;\n}\n.chat_img img[data-v-0d66c37a] {\n   width: 100%\n}\n.chat_ib[data-v-0d66c37a] {\n   float: left;\n   padding: 0 0 0 15px;\n   width: 88%;\n}\n.chat_people[data-v-0d66c37a] {\n   overflow: hidden;\n   clear: both;\n}\n.chat_list[data-v-0d66c37a] {\n   border-bottom: 1px solid #ddd;\n   margin: 0;\n   padding: 18px 16px 10px;\n   height: 70px;\n}\n.chat_list[data-v-0d66c37a]:hover {\n   cursor: pointer;\n}\n.inbox_chat[data-v-0d66c37a] {\n   height: 550px;\n   overflow-y: scroll;\n}\n.active_chat[data-v-0d66c37a] {\n   background: #e8f6ff;\n}\n.incoming_msg_img[data-v-0d66c37a] {\n   display: inline-block;\n   width: 6%;\n}\n.received_msg[data-v-0d66c37a] {\n   background: #b6a999;\n}\n.received_msg p[data-v-0d66c37a] {\n   background: #ebebeb none repeat scroll 0 0;\n   border-radius: 0 15px 15px 15px;\n   color: #646464;\n   font-size: 14px;\n   margin: 0;\n   padding: 5px 10px 5px 12px;\n   width: 100%;\n}\n.received_withd_msg p[data-v-0d66c37a] {\n   background: #ebebeb none repeat scroll 0 0;\n   border-radius: 0 15px 15px 15px;\n   color: #646464;\n   font-size: 14px;\n   margin: 0;\n   padding: 5px 10px 5px 12px;\n   width: 100%;\n}\n.time_date[data-v-0d66c37a] {\n   color: #747474;\n   display: block;\n   font-size: 12px;\n   margin: 8px 0 0;\n}\n.received_withd_msg[data-v-0d66c37a] {\n   width: 57%;\n}\n.mesgs[data-v-0d66c37a] {\n   float: left;\n   padding: 30px 15px 0 25px;\n   width: 70%;\n   background: #e7e3de;\n}\n.outgoing_msg[data-v-0d66c37a] {\n   overflow: hidden;\n   margin: 26px 0 26px;\n}\n.sent_msg[data-v-0d66c37a] {\n   margin-left: 300px;\n   width: 46%;\n   background: #15ff89;\n}\n.input_msg_write input[data-v-0d66c37a] {\n   background: rgba(0, 0, 0, 0) none repeat scroll 0 0;\n   border: medium none;\n   color: #4c4c4c;\n   font-size: 15px;\n   min-height: 48px;\n   width: 100%;\n   outline: none;\n}\n.type_msg[data-v-0d66c37a] {\n   border-top: 1px solid #c4c4c4;\n   position: relative;\n}\n.msg_send_btn[data-v-0d66c37a] {\n   background: #05728f none repeat scroll 0 0;\n   border: none;\n   border-radius: 50%;\n   color: #fff;\n   cursor: pointer;\n   font-size: 15px;\n   height: 33px;\n   position: absolute;\n   right: 0;\n   top: 11px;\n   width: 33px;\n}\n.messaging[data-v-0d66c37a] {\n   padding: 0 0 50px 0;\n}\n.msg_history[data-v-0d66c37a] {\n   position: relative;\n   height: 516px;\n   overflow-y: auto;\n}\n", ""]);
+exports.push([module.i, "\n.container[data-v-0d66c37a] {\n   max-width: 900px;\n}\n.msg-list[data-v-0d66c37a] {\n   position: absolute;\n   bottom: 0;\n}\n.msg-list li[data-v-0d66c37a] {\n   margin-bottom: 5px;\n   width: 700px;\n}\n.user_online[data-v-0d66c37a] {\n   color: #148002 !important;\n   font-weight: bold;\n}\n.inbox_people[data-v-0d66c37a] {\n   background: #fff;\n   float: left;\n   overflow: hidden;\n   width: 30%;\n   border-right: 1px solid #ddd;\n}\n.inbox_msg[data-v-0d66c37a] {\n   border: 1px solid #ddd;\n   clear: both;\n   overflow: hidden;\n}\n.top_spac[data-v-0d66c37a] {\n   margin: 20px 0 0;\n}\n.recent_heading[data-v-0d66c37a] {\n   float: left;\n   width: 40%;\n}\n.srch_bar[data-v-0d66c37a] {\n   display: inline-block;\n   text-align: right;\n   width: 60%;\n}\n.headind_srch[data-v-0d66c37a] {\n   padding: 10px 29px 10px 20px;\n   overflow: hidden;\n   border-bottom: 1px solid #c4c4c4;\n}\n.recent_heading h4[data-v-0d66c37a] {\n   color: #0465ac;\n   font-size: 16px;\n   margin: auto;\n   line-height: 29px;\n}\n.srch_bar input[data-v-0d66c37a] {\n   outline: none;\n   border: 1px solid #cdcdcd;\n   border-width: 0 0 1px 0;\n   width: 80%;\n   padding: 2px 0 4px 6px;\n   background: none;\n}\n.srch_bar .input-group-addon button[data-v-0d66c37a] {\n   background: rgba(0, 0, 0, 0) none repeat scroll 0 0;\n   border: medium none;\n   padding: 0;\n   color: #707070;\n   font-size: 18px;\n}\n.srch_bar .input-group-addon[data-v-0d66c37a] {\n   margin: 0 0 0 -27px;\n}\n.chat_ib h5[data-v-0d66c37a] {\n   font-size: 15px;\n   color: #464646;\n   margin: 0 0 8px 0;\n}\n.chat_ib h5 span[data-v-0d66c37a] {\n   font-size: 13px;\n   float: right;\n}\n.chat_ib p[data-v-0d66c37a] {\n   font-size: 12px;\n   color: #989898;\n   margin: auto;\n   display: inline-block;\n   white-space: nowrap;\n   overflow: hidden;\n   text-overflow: ellipsis;\n}\n.chat_img[data-v-0d66c37a] {\n   float: left;\n   width: 11%;\n}\n.chat_img img[data-v-0d66c37a] {\n   width: 100%\n}\n.chat_ib[data-v-0d66c37a] {\n   float: left;\n   padding: 0 0 0 15px;\n   width: 88%;\n}\n.chat_people[data-v-0d66c37a] {\n   overflow: hidden;\n   clear: both;\n}\n.chat_list[data-v-0d66c37a] {\n   border-bottom: 1px solid #ddd;\n   margin: 0;\n   padding: 18px 16px 10px;\n   height: 70px;\n}\n.chat_list[data-v-0d66c37a]:hover {\n   cursor: pointer;\n}\n.inbox_chat[data-v-0d66c37a] {\n   height: 550px;\n   overflow-y: scroll;\n}\n.active_chat[data-v-0d66c37a] {\n   background: #e8f6ff;\n}\n.incoming_msg_img[data-v-0d66c37a] {\n   display: inline-block;\n   width: 6%;\n}\n.received_msg[data-v-0d66c37a] {\n   background: #b6a999;\n}\n.received_msg p[data-v-0d66c37a] {\n   background: #ebebeb none repeat scroll 0 0;\n   border-radius: 0 15px 15px 15px;\n   color: #646464;\n   font-size: 14px;\n   margin: 0;\n   padding: 5px 10px 5px 12px;\n   width: 100%;\n}\n.received_withd_msg p[data-v-0d66c37a] {\n   background: #ebebeb none repeat scroll 0 0;\n   border-radius: 0 15px 15px 15px;\n   color: #646464;\n   font-size: 14px;\n   margin: 0;\n   padding: 5px 10px 5px 12px;\n   width: 100%;\n}\n.time_date[data-v-0d66c37a] {\n   color: #747474;\n   display: block;\n   font-size: 12px;\n   margin: 8px 0 0;\n}\n.received_withd_msg[data-v-0d66c37a] {\n   width: 57%;\n}\n.mesgs[data-v-0d66c37a] {\n   float: left;\n   padding: 30px 15px 0 25px;\n   width: 70%;\n   background: #e7e3de;\n}\n.outgoing_msg[data-v-0d66c37a] {\n   overflow: hidden;\n   margin: 26px 0 26px;\n}\n.sent_msg[data-v-0d66c37a] {\n   margin-left: 300px;\n   width: 46%;\n   background: #15ff89;\n}\n.input_msg_write input[data-v-0d66c37a] {\n   background: rgba(0, 0, 0, 0) none repeat scroll 0 0;\n   border: medium none;\n   color: #4c4c4c;\n   font-size: 15px;\n   min-height: 48px;\n   width: 100%;\n   outline: none;\n}\n.type_msg[data-v-0d66c37a] {\n   border-top: 1px solid #c4c4c4;\n   position: relative;\n}\n.msg_send_btn[data-v-0d66c37a] {\n   background: #05728f none repeat scroll 0 0;\n   border: none;\n   border-radius: 50%;\n   color: #fff;\n   cursor: pointer;\n   font-size: 15px;\n   height: 33px;\n   position: absolute;\n   right: 0;\n   top: 11px;\n   width: 33px;\n}\n.messaging[data-v-0d66c37a] {\n   padding: 0 0 50px 0;\n}\n.msg_history[data-v-0d66c37a] {\n   position: relative;\n   height: 516px;\n   overflow-y: auto;\n}\n", ""]);
 
 // exports
 
@@ -47759,31 +47794,35 @@ var render = function() {
         _c(
           "div",
           { staticClass: "inbox_chat scroll" },
-          _vm._l(_vm.online_users, function(value, index) {
-            return value.id !== _vm.auth_user.id
-              ? _c(
-                  "div",
-                  {
-                    key: value.index,
-                    staticClass: "chat_list",
-                    class: { active_chat: _vm.active_chat_flag === index },
-                    on: {
-                      click: function($event) {
-                        return _vm.selectUserToSendMessage(value, index)
-                      }
-                    }
-                  },
-                  [
-                    _c("div", { staticClass: "chat_people" }, [
-                      _c("div", { staticClass: "chat_ib" }, [
-                        _c("h5", [_vm._v(_vm._s(value.name))]),
-                        _vm._v(" "),
-                        _c("p", [_vm._v(_vm._s(_vm.messaging))])
-                      ])
-                    ])
-                  ]
-                )
-              : _vm._e()
+          _vm._l(_vm.all_users, function(value, index) {
+            return _c(
+              "div",
+              {
+                key: value.id,
+                staticClass: "chat_list",
+                class: { active_chat: _vm.active_chat_flag === index },
+                on: {
+                  click: function($event) {
+                    return _vm.selectUserToSendMessage(value, index)
+                  }
+                }
+              },
+              [
+                _c("div", { staticClass: "chat_people" }, [
+                  _c("div", { staticClass: "chat_ib" }, [
+                    _c("h4", [_vm._v(_vm._s(value.name))]),
+                    _vm._v(" "),
+                    value.status === "Online"
+                      ? _c("p", { staticClass: "user_online" }, [
+                          _vm._v(_vm._s(value.status))
+                        ])
+                      : _c("p", [_vm._v(_vm._s(value.status))]),
+                    _vm._v(" "),
+                    _c("p", [_vm._v(_vm._s(value.typing))])
+                  ])
+                ])
+              ]
+            )
           }),
           0
         )
@@ -47796,21 +47835,24 @@ var render = function() {
                 "ul",
                 { staticClass: "list-group msg-list" },
                 _vm._l(_vm.all_messages, function(msgs, index) {
-                  return _c(
-                    "li",
-                    {
-                      key: index,
-                      staticClass: "list-group-item",
-                      class: msgs.msg_class
-                    },
-                    [
-                      _vm._v(
-                        "\n                  " +
-                          _vm._s(msgs.message) +
-                          "\n               "
+                  return msgs.receiver_id === _vm.receiver_user.id ||
+                    msgs.sender_id === _vm.auth_user.id
+                    ? _c(
+                        "li",
+                        {
+                          key: index,
+                          staticClass: "list-group-item",
+                          class: msgs.msg_class
+                        },
+                        [
+                          _vm._v(
+                            "\n                  " +
+                              _vm._s(msgs.message) +
+                              "\n               "
+                          )
+                        ]
                       )
-                    ]
-                  )
+                    : _vm._e()
                 }),
                 0
               )

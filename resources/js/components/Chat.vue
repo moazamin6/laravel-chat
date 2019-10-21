@@ -6,22 +6,25 @@
             <div class="inbox_chat scroll">
                <div :class="{ active_chat : active_chat_flag === index }" class="chat_list"
                     @click="selectUserToSendMessage(value,index)"
-                    v-for="(value,index) in online_users"
-                    :key="value.index" v-if="value.id !== auth_user.id">
+                    v-for="(value,index) in all_users"
+                    :key="value.id">
                   <div class="chat_people">
                      <div class="chat_ib">
-                        <h5>{{value.name}}</h5>
-                        <p>{{messaging}}</p>
+                        <h4>{{value.name}}</h4>
+                        <p v-if="value.status==='Online'" class="user_online">{{value.status}}</p>
+                        <p v-else>{{value.status}}</p>
+                        <p>{{value.typing}}</p>
                      </div>
                   </div>
                </div>
             </div>
          </div>
          <div v-if="active_chat_flag > -1" class="mesgs">
+
             <div class="msg_history">
                <ul class="list-group msg-list">
                   <li class="list-group-item" :class="msgs.msg_class" v-for="(msgs,index) in all_messages"
-                      :key="index">
+                      :key="index" v-if="msgs.receiver_id===receiver_user.id||msgs.sender_id===auth_user.id">
                      {{msgs.message}}
                   </li>
                </ul>
@@ -53,9 +56,11 @@
             user: {},
             all_messages: [],
             online_users: [],
+            all_users: [],
             active_chat_flag: '-1',
             receiver_user: {},
-            messaging: ''
+            messaging: '',
+            whisper_id: ''
          };
       },
       computed: {
@@ -63,14 +68,19 @@
          //
          // }
       },
+      created() {
+         this.getAllUsers()
+      },
       watch: {
          message() {
             window.Echo.private('laravel-chat-' + this.receiver_user.id)
                 .whisper('messaging', {
-                   msg: this.message
+                   msg: this.message,
+                   whisper_id: this.auth_user.id
                 });
          }
       },
+
       methods: {
          sendMessage() {
             if (this.message.length !== 0) {
@@ -85,7 +95,8 @@
                    });
                message_data = null;
                message_data = {
-                  user_id: this.auth_user.id,
+                  sender_id: this.auth_user.id,
+                  receiver_id: this.receiver_user.id,
                   message: this.message,
                   msg_class: 'sent_msg'
                };
@@ -99,14 +110,28 @@
             this.receiver_user = user;
             this.active_chat_flag = index;
             // console.log(this.receiver_user)
+         },
+         getAllUsers() {
+
+            let self = this;
+            axios.get(window.base_url + "/users")
+                .then(function (response) {
+                   self.all_users = response.data;
+                   self.all_users.forEach(function (user, index) {
+                      self.$set(user, 'status', 'Offline');
+                      self.$set(user, 'typing', '');
+                   });
+                });
          }
       },
       mounted() {
 
+
          window.Echo.private('laravel-chat-' + this.auth_user.id)
              .listen('ChatEvent', (e) => {
                 let message_data = {
-                   user_id: e.user.id,
+                   sender_id: this.receiver_user.id,
+                   receiver_id: this.auth_user.id,
                    message: e.message,
                    msg_class: 'received_msg'
                 };
@@ -114,29 +139,52 @@
              })
              .listenForWhisper('messaging', (e) => {
 
-                if (e.msg !== '') {
-                   this.messaging = 'Typing...';
-                } else {
-                   this.messaging = '';
-                }
-                // console.log(e);
+                this.all_users.forEach(function (user, index) {
+
+                   if (e.msg !== '') {
+                      if (e.whisper_id === user.id) {
+                         Vue.set(user, 'typing', 'Typing...');
+                      }
+                   } else {
+                      Vue.set(user, 'typing', '');
+                   }
+
+                });
              });
 
          window.Echo.join(`user-join`)
              .here((users) => {
-                this.online_users = users;
-                // console.log(users);
-             })
-             .joining((user) => {
 
-                this.online_users.push(user);
-                // console.log(user.name + " joined");
-             })
-             .leaving((user) => {
+                let self = this;
+                self.all_users.forEach(function (user, index) {
 
-                let index = this.online_users.indexOf(user.name);
-                this.online_users.splice(index, 1);
-                // console.log(user.name + " leaved");
+                   users.forEach(function (on_user, index) {
+
+                      if (user.id === on_user.id) {
+                         Vue.set(user, 'status', 'Online');
+                         // user.status = 'Online';
+                      }
+                   });
+                });
+             })
+             .joining((on_user) => {
+
+                this.all_users.forEach(function (user, index) {
+
+                   if (user.id === on_user.id) {
+                      Vue.set(user, 'status', 'Online');
+                      // user.status = 'Online';
+                   }
+                });
+             })
+             .leaving((off_user) => {
+
+                this.all_users.forEach(function (user, index) {
+
+                   if (user.id === off_user.id) {
+                      Vue.set(user, 'status', 'Offline');
+                   }
+                });
              })
       }
    }
@@ -155,6 +203,11 @@
    .msg-list li {
       margin-bottom: 5px;
       width: 700px;
+   }
+
+   .user_online {
+      color: #148002 !important;
+      font-weight: bold;
    }
 
    .inbox_people {
