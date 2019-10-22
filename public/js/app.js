@@ -1907,6 +1907,7 @@ __webpack_require__.r(__webpack_exports__);
   },
   created: function created() {
     this.getAllUsers();
+    this.getAllMessages();
   },
   watch: {
     message: function message() {
@@ -1921,7 +1922,8 @@ __webpack_require__.r(__webpack_exports__);
       if (this.message.length !== 0) {
         var message_data = {
           message: this.message,
-          user: this.receiver_user
+          receiver_user: this.receiver_user,
+          sender_user: this.auth_user
         };
         axios.post(window.base_url + "/message", message_data).then(function (response) {// console.log(response.data);
         });
@@ -1948,6 +1950,12 @@ __webpack_require__.r(__webpack_exports__);
           self.$set(user, 'status', 'Offline');
           self.$set(user, 'typing', '');
         });
+      });
+    },
+    getAllMessages: function getAllMessages() {
+      var self = this;
+      axios.get(window.base_url + "/get-messages").then(function (response) {
+        console.log(response.data);
       });
     }
   },

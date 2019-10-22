@@ -25,6 +25,7 @@ class HomeController extends Controller
     public function index()
     {
 
+//        session()->forget('chat');
         return view('home');
     }
 }
