@@ -13,22 +13,29 @@ class ChatController extends Controller
     {
 
         $user = User::find($request->receiver_user['id']);
-        $data = array(
-            array(
-                'message' => $request->message,
-                'receiver_user' => $request->receiver_user,
-                'sender_user' => $request->sender_user
-            )
-        );
+//        $data = array('mm' =>
+//            array(
+//                'message' => $request->message,
+//                'receiver_user' => $request->receiver_user,
+//                'sender_user' => $request->sender_user
+//            )
+//        );
 
-        if (session()->has('chat')) {
-            $session_data = session('chat');
-        } else {
-            $session_data = [];
-        }
 
-        $data = array_merge($session_data, $data);
-        session(['chat' => $data]);
+//        $data[][$user->id] = [
+//            'message' => $request->message,
+//            'receiver_user' => $request->receiver_user,
+//            'sender_user' => $request->sender_user
+//        ];
+//
+//        if (session()->has('chat')) {
+//            $session_data = session('chat');
+//        } else {
+//            $session_data = [];
+//        }
+//
+//        $data = array_merge($session_data, $data);
+//        session(['chat' => $data]);
         broadcast(new ChatEvent($user, $request->message));
         return $request;
     }
@@ -41,5 +48,10 @@ class ChatController extends Controller
     public function getMessagesFromSession()
     {
         return session('chat');
+    }
+
+    public function del()
+    {
+        session()->forget('chat');
     }
 }

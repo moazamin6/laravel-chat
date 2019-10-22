@@ -1893,6 +1893,7 @@ __webpack_require__.r(__webpack_exports__);
       message: '',
       user: {},
       all_messages: [],
+      user_messages: [],
       online_users: [],
       all_users: [],
       active_chat_flag: '-1',
@@ -1906,8 +1907,7 @@ __webpack_require__.r(__webpack_exports__);
     // }
   },
   created: function created() {
-    this.getAllUsers();
-    this.getAllMessages();
+    this.getAllUsers(); // this.getAllMessages();
   },
   watch: {
     message: function message() {
@@ -1920,6 +1920,7 @@ __webpack_require__.r(__webpack_exports__);
   methods: {
     sendMessage: function sendMessage() {
       if (this.message.length !== 0) {
+        var receiver_id = this.receiver_user.id;
         var message_data = {
           message: this.message,
           receiver_user: this.receiver_user,
@@ -1935,12 +1936,25 @@ __webpack_require__.r(__webpack_exports__);
           msg_class: 'sent_msg'
         };
         this.all_messages.push(message_data);
+        this.user_messages.push(message_data); // console.log(this.user_messages);
+
         this.message = '';
       }
     },
     selectUserToSendMessage: function selectUserToSendMessage(user, index) {
-      this.receiver_user = user;
-      this.active_chat_flag = index; // console.log(this.receiver_user)
+      var self = this;
+      self.receiver_user = user;
+      self.active_chat_flag = index;
+
+      if (self.all_messages.length !== 0) {
+        self.user_messages = [];
+        self.all_messages.forEach(function (value, i) {
+          if (value.receiver_id === self.receiver_user.id || value.sender_id === self.all_users.id) {
+            self.user_messages.push(value);
+          }
+        });
+      } // console.log(self.user_messages)
+
     },
     getAllUsers: function getAllUsers() {
       var self = this;
@@ -1971,6 +1985,8 @@ __webpack_require__.r(__webpack_exports__);
       };
 
       _this.all_messages.push(message_data);
+
+      _this.user_messages.push(message_data);
     }).listenForWhisper('messaging', function (e) {
       _this.all_users.forEach(function (user, index) {
         if (e.msg !== '') {
@@ -47842,25 +47858,22 @@ var render = function() {
               _c(
                 "ul",
                 { staticClass: "list-group msg-list" },
-                _vm._l(_vm.all_messages, function(msgs, index) {
-                  return msgs.receiver_id === _vm.receiver_user.id ||
-                    msgs.sender_id === _vm.auth_user.id
-                    ? _c(
-                        "li",
-                        {
-                          key: index,
-                          staticClass: "list-group-item",
-                          class: msgs.msg_class
-                        },
-                        [
-                          _vm._v(
-                            "\n                  " +
-                              _vm._s(msgs.message) +
-                              "\n               "
-                          )
-                        ]
+                _vm._l(_vm.user_messages, function(msgs, index) {
+                  return _c(
+                    "li",
+                    {
+                      key: index,
+                      staticClass: "list-group-item",
+                      class: msgs.msg_class
+                    },
+                    [
+                      _vm._v(
+                        "\n                  " +
+                          _vm._s(msgs.message) +
+                          "\n               "
                       )
-                    : _vm._e()
+                    ]
+                  )
                 }),
                 0
               )

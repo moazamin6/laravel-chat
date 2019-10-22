@@ -25,3 +25,4 @@ Route::post('/message', 'ChatController@sendMessage')->name('send-message');
 
 Route::get('/users', 'ChatController@getAllUsers');
 Route::get('/get-messages', 'ChatController@getMessagesFromSession');
+Route::get('/del', 'ChatController@del');

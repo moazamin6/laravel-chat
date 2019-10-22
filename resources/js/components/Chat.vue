@@ -23,8 +23,8 @@
 
             <div class="msg_history">
                <ul class="list-group msg-list">
-                  <li class="list-group-item" :class="msgs.msg_class" v-for="(msgs,index) in all_messages"
-                      :key="index" v-if="msgs.receiver_id===receiver_user.id||msgs.sender_id===auth_user.id">
+                  <li class="list-group-item" :class="msgs.msg_class" v-for="(msgs,index) in user_messages"
+                      :key="index">
                      {{msgs.message}}
                   </li>
                </ul>
@@ -55,6 +55,7 @@
             message: '',
             user: {},
             all_messages: [],
+            user_messages: [],
             online_users: [],
             all_users: [],
             active_chat_flag: '-1',
@@ -70,7 +71,7 @@
       },
       created() {
          this.getAllUsers();
-         this.getAllMessages();
+         // this.getAllMessages();
       },
       watch: {
          message() {
@@ -86,6 +87,7 @@
          sendMessage() {
             if (this.message.length !== 0) {
 
+               let receiver_id = this.receiver_user.id;
                let message_data = {
                   message: this.message,
                   receiver_user: this.receiver_user,
@@ -103,15 +105,28 @@
                   msg_class: 'sent_msg'
                };
                this.all_messages.push(message_data);
+               this.user_messages.push(message_data);
+               // console.log(this.user_messages);
                this.message = '';
             }
          },
 
          selectUserToSendMessage(user, index) {
 
-            this.receiver_user = user;
-            this.active_chat_flag = index;
-            // console.log(this.receiver_user)
+            let self = this;
+
+            self.receiver_user = user;
+            self.active_chat_flag = index;
+            if (self.all_messages.length !== 0) {
+               self.user_messages = [];
+               self.all_messages.forEach(function (value, i) {
+
+                  if (value.receiver_id === self.receiver_user.id || value.sender_id === self.all_users.id) {
+                     self.user_messages.push(value);
+                  }
+               });
+            }
+            // console.log(self.user_messages)
          },
          getAllUsers() {
 
@@ -136,8 +151,6 @@
          }
       },
       mounted() {
-
-
          window.Echo.private('laravel-chat-' + this.auth_user.id)
              .listen('ChatEvent', (e) => {
                 let message_data = {
@@ -147,6 +160,7 @@
                    msg_class: 'received_msg'
                 };
                 this.all_messages.push(message_data);
+                this.user_messages.push(message_data);
              })
              .listenForWhisper('messaging', (e) => {
 
